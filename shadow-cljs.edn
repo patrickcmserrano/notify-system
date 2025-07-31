@@ -5,6 +5,6 @@
  :builds       {:app {:target     :browser
                       :output-dir "resources/public/js"
                       :asset-path "/js"
-                      :modules    {:main {:init-fn notif-system.core/init}}
+                      :modules    {:main {:init-fn notify-system.core/init}}
                       :devtools   {:http-root "resources/public"
                                    :http-port 3001}}}}
