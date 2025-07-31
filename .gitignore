@@ -1,0 +1,44 @@
+# Clojure
+.cpcache/
+.lsp/
+.clj-kondo/.cache/
+target/
+pom.xml
+*.jar
+*.class
+
+# Shadow-cljs
+.shadow-cljs/
+node_modules/
+public/js/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Knowledge and documentation files (excluding from version control)
+knowledge/
+docs/
+*.md
+README.md
+
+# Temporary files
+*.tmp
+*.temp
+.nrepl-port
+.rebel_readline_history

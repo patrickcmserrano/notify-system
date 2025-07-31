@@ -1,0 +1,10 @@
+{:source-paths ["src/main/cljs" "dev"]
+ :dependencies [[reagent "1.2.0"]
+                [re-frame "1.3.0"]
+                [cljs-ajax "0.8.4"]]
+ :builds       {:app {:target     :browser
+                      :output-dir "resources/public/js"
+                      :asset-path "/js"
+                      :modules    {:main {:init-fn notif-system.core/init}}
+                      :devtools   {:http-root "resources/public"
+                                   :http-port 3001}}}}
