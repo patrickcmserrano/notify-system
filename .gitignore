@@ -34,12 +34,9 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 
-# Knowledge and documentation files (excluding from version control, except delivery docs)
 knowledge/
 docs/
 *.md
-!DELIVERY.md
-README.md
 
 # Temporary files
 *.tmp
@@ -54,3 +51,19 @@ scripts/*stress*
 stress-test-results/
 stress-test-backup*/
 make
+
+# Production configuration (exclude from delivery)
+*.prod.*
+Dockerfile.prod
+docker-compose.prod.yml
+nginx.prod.conf
+.env.prod*
+build.clj
+monitoring/
+resources_bakcup/
+
+# Development and build scripts (exclude from delivery)
+debug-db.clj
+run-tests.sh
+setup-db.sh
+*.sh
