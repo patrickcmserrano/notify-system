@@ -162,24 +162,3 @@
     (catch Exception e
       (println (format "\nError: %s" (.getMessage e)))
       (System/exit 1))))
-
-;; Convenience functions for REPL usage
-(defn send-sports-message [message]
-  "Send a sports notification"
-  (service/safe-send-notification "Sports" message))
-
-(defn send-finance-message [message]
-  "Send a finance notification"
-  (service/safe-send-notification "Finance" message))
-
-(defn send-movies-message [message]
-  "Send a movies notification"
-  (service/safe-send-notification "Movies" message))
-
-(defn show-stats []
-  "Show system statistics"
-  (service/get-system-stats))
-
-(defn show-users []
-  "Show all users"
-  (users/get-all-users))
