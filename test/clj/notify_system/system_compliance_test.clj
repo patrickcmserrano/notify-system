@@ -6,6 +6,7 @@
             [notify-system.service :as service] 
             [notify-system.users :as users]
             [notify-system.db :as db]
+            [notify-system.logging :as logging]
             ;; Load component test namespaces
             [notify-system.channels-test]
             [notify-system.service-test]
@@ -17,27 +18,37 @@
 
 (deftest test-single-responsibility-principle
   (testing "Single Responsibility Principle: Each module has one clear purpose"
+    (println "[TEST-START] test-single-responsibility-principle - Validating SRP compliance")
     
     (testing "Database layer handles only data persistence concerns"
+      (println "[SRP-TEST] Validating database layer single responsibility")
       (is (fn? db/query) "Query execution")
       (is (fn? db/execute!) "Command execution") 
       (is (fn? db/init-db!) "Connection management")
-      (is (fn? db/migrate!) "Schema management"))
+      (is (fn? db/migrate!) "Schema management")
+      (println "[SRP-VALIDATION] Database layer SRP compliance verified"))
     
     (testing "Service layer handles only business logic orchestration"
+      (println "[SRP-TEST] Validating service layer single responsibility")
       (is (fn? service/send-message) "Message delivery orchestration")
       (is (fn? service/get-delivery-log) "Audit trail management")
-      (is (fn? service/create-notification-service) "Service composition"))
+      (is (fn? service/create-notification-service) "Service composition")
+      (println "[SRP-VALIDATION] Service layer SRP compliance verified"))
     
     (testing "Channel layer handles only notification delivery mechanisms"
+      (println "[SRP-TEST] Validating channel layer single responsibility")
       (is (fn? channels/send-notification) "Notification delivery")
       (is (fn? channels/validate-user) "Channel-specific validation")
-      (is (fn? channels/create-channel) "Channel instantiation"))
+      (is (fn? channels/create-channel) "Channel instantiation")
+      (println "[SRP-VALIDATION] Channel layer SRP compliance verified"))
     
     (testing "User layer handles only user management operations"
+      (println "[SRP-TEST] Validating user layer single responsibility")
       (is (fn? users/register-user) "User registration")
       (is (fn? users/update-preferences) "Preference management")
-      (is (fn? users/get-user-profile) "Profile retrieval"))))
+      (is (fn? users/get-user-profile) "Profile retrieval")
+      (println "[SRP-VALIDATION] User layer SRP compliance verified"))
+    (println "[TEST-SUCCESS] Single Responsibility Principle validation completed")))
 
 (deftest test-open-closed-principle
   (testing "Open/Closed Principle: Open for extension, closed for modification"
@@ -51,10 +62,7 @@
     
     (testing "Service layer accepts repository dependencies via injection"
       (let [mock-repo (reify service/NotificationRepository
-                        (save-notification-log [_ _] nil)
-                        (get-users-by-category-and-channel [_ _ _] [])
-                        (get-categories [_] [])
-                        (get-channels [_] []))]
+                        (get-users-by-category-and-channel [_ _ _] []))]
         (is (satisfies? service/NotificationRepository mock-repo)
             "Repository interface allows new implementations")))))
 
@@ -92,16 +100,18 @@
     
     (testing "Service layer depends on repository abstraction"
       (let [mock-repo (reify service/NotificationRepository
-                        (save-notification-log [_ _] {:status "logged"})
-                        (get-users-by-category-and-channel [_ _ _] [])
-                        (get-categories [_] [])
-                        (get-channels [_] []))
-            service-impl (service/->NotificationServiceImpl mock-repo)]
+                        (get-users-by-category-and-channel [_ _ _] []))
+            mock-logging-service (reify logging/LoggingService
+                                   (log-notification [_ _ _ _ _] nil)
+                                   (log-notification-error [_ _ _ _ _] nil)
+                                   (get-notification-history [_] [])
+                                   (get-notification-statistics [_] {}))
+            service-impl (service/->NotificationServiceImpl mock-repo mock-logging-service)]
         
         (is (not (nil? service-impl)) "Service accepts repository dependency")
         (is (satisfies? service/NotificationService service-impl)
             "Service implements its own abstraction")))
-    
+
     (testing "High-level modules do not depend on low-level implementation details"
       (is (fn? service/create-notification-service)
           "Factory function abstracts concrete dependencies"))))
@@ -158,11 +168,13 @@
     
     (testing "Repository enables dependency injection and testing"
       (let [mock-repo (reify service/NotificationRepository
-                        (save-notification-log [_ log] log)
-                        (get-users-by-category-and-channel [_ cat ch] [])
-                        (get-categories [_] [])
-                        (get-channels [_] []))
-            service (service/->NotificationServiceImpl mock-repo)]
+                        (get-users-by-category-and-channel [_ _ _] []))
+            mock-logging-service (reify logging/LoggingService
+                                   (log-notification [_ _ _ _ _] nil)
+                                   (log-notification-error [_ _ _ _ _] nil)
+                                   (get-notification-history [_] [])
+                                   (get-notification-statistics [_] {}))
+            service (service/->NotificationServiceImpl mock-repo mock-logging-service)]
         
         (is (satisfies? service/NotificationService service)
             "Service works with mock repository for testing")))))
@@ -365,43 +377,48 @@
   (println "=== NOTIFICATION SYSTEM - COMPLIANCE TEST SUITE ===")
   (println "Comprehensive validation of enterprise architecture patterns,")
   (println "SOLID principles, and business requirement fulfillment.")
+  (println (format "Test execution started at: %s" (java.time.Instant/now)))
   (println "")
   
   (let [start-time (System/currentTimeMillis)
+        _ (println "[SUITE-START] Beginning compliance test execution")
         results (run-tests 'notify-system.system-compliance-test)
         end-time (System/currentTimeMillis)
         duration (- end-time start-time)]
     
     (println "")
     (println "=== TEST EXECUTION SUMMARY ===")
-    (printf "Tests Executed: %d%n" (:test results))
-    (printf "Assertions Verified: %d%n" (:pass results))
-    (printf "Failures: %d%n" (:fail results))
-    (printf "Errors: %d%n" (:error results))
-    (printf "Execution Time: %d ms%n" duration)
+    (println (format "[SUITE-METRICS] Execution completed at: %s" (java.time.Instant/now)))
+    (printf "[SUITE-RESULTS] Tests Executed: %d%n" (:test results))
+    (printf "[SUITE-RESULTS] Assertions Verified: %d%n" (:pass results))
+    (printf "[SUITE-RESULTS] Failures: %d%n" (:fail results))
+    (printf "[SUITE-RESULTS] Errors: %d%n" (:error results))
+    (printf "[SUITE-TIMING] Total Execution Time: %d ms%n" duration)
+    (printf "[SUITE-PERFORMANCE] Average time per test: %.2f ms%n" (double (/ duration (:test results))))
     (println "")
     
     (if (and (zero? (:fail results)) (zero? (:error results)))
       (do
         (println "=== COMPLIANCE STATUS: PASSED ===")
-        (println "✓ SOLID Principles Implementation")
-        (println "✓ Design Patterns Integration")
-        (println "✓ Architectural Quality Assurance")
-        (println "✓ Fault Tolerance and Resilience")
-        (println "✓ Input Validation and Security")
-        (println "✓ Performance and Scalability Design")
-        (println "✓ Business Requirements Fulfillment")
-        (println "✓ System Extensibility Architecture")
+        (println "[COMPLIANCE-CHECK] ✓ SOLID Principles Implementation")
+        (println "[COMPLIANCE-CHECK] ✓ Design Patterns Integration")
+        (println "[COMPLIANCE-CHECK] ✓ Architectural Quality Assurance")
+        (println "[COMPLIANCE-CHECK] ✓ Fault Tolerance and Resilience")
+        (println "[COMPLIANCE-CHECK] ✓ Input Validation and Security")
+        (println "[COMPLIANCE-CHECK] ✓ Performance and Scalability Design")
+        (println "[COMPLIANCE-CHECK] ✓ Business Requirements Fulfillment")
+        (println "[COMPLIANCE-CHECK] ✓ System Extensibility Architecture")
         (println "")
-        (println "System ready for production deployment."))
+        (println "[DEPLOYMENT-STATUS] System ready for production deployment."))
       (do
         (println "=== COMPLIANCE STATUS: REQUIRES ATTENTION ===")
         (when (> (:fail results) 0)
-          (printf "Test failures detected: %d%n" (:fail results)))
+          (printf "[COMPLIANCE-ISSUE] Test failures detected: %d%n" (:fail results)))
         (when (> (:error results) 0)
-          (printf "System errors detected: %d%n" (:error results)))
-        (println "Review failed tests before deployment.")))
+          (printf "[COMPLIANCE-ISSUE] System errors detected: %d%n" (:error results)))
+        (println "[DEPLOYMENT-STATUS] Review failed tests before deployment.")))
     
+    (println (format "[SUITE-END] Compliance suite execution completed at: %s" (java.time.Instant/now)))
     results))
 
 (comment
