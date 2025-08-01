@@ -224,63 +224,6 @@
   (GET "/api/logs/statistics" [] get-log-statistics-controller)
   (GET "/api/categories" [] get-categories-controller)
   
-  ;; Stress Test API Routes (conditional)
-  (when stress-test-available?
-    (POST "/api/stress-test/start" request 
-          (try
-            (println "Full request keys:" (keys request))
-            (println "Request body:" (get request :body))
-            (println "Request params:" (get request :params))
-            (println "Request query-params:" (get request :query-params))
-            (println "Request form-params:" (get request :form-params))
-            (let [config (or (get-in request [:body]) 
-                             (get-in request [:params])
-                             (get-in request [:form-params])
-                             {})]
-              (println "Received stress test config:" config)
-              (println "Config type:" (type config))
-              (let [start-fn (ns-resolve stress-test-ns 'start-stress-test!)
-                    result (start-fn config)]
-                (if result
-                  (response {:status "started" :message "Stress test started successfully"})
-                  (response {:status "error" :message "Stress test is already running"}))))
-            (catch Exception e
-              (println "Error starting stress test:" (.getMessage e))
-              (-> (response {:status "error" :message (.getMessage e)})
-                  (status 500))))))
-  
-  (when stress-test-available?
-    (POST "/api/stress-test/stop" []
-          (try
-            (let [stop-fn (ns-resolve stress-test-ns 'stop-stress-test!)
-                  result (stop-fn)]
-              (if result
-                (response {:status "stopped" :message "Stress test stopped successfully"})
-                (response {:status "info" :message "No stress test was running"})))
-            (catch Exception e
-              (-> (response {:status "error" :message (.getMessage e)})
-                  (status 500))))))
-  
-  (when stress-test-available?
-    (GET "/api/stress-test/metrics" []
-         (try
-           (let [metrics-fn (ns-resolve stress-test-ns 'get-current-metrics)
-                 metrics (metrics-fn)]
-             (response (or metrics {:message "No stress test running"})))
-           (catch Exception e
-             (-> (response {:status "error" :message (.getMessage e)})
-                 (status 500))))))
-  
-  (when stress-test-available?
-    (GET "/api/stress-test/report" []
-         (try
-           (let [report-fn (ns-resolve stress-test-ns 'generate-final-report!)
-                 report (report-fn)]
-             (response (or report {:message "No stress test data available"})))
-           (catch Exception e
-             (-> (response {:status "error" :message (.getMessage e)})
-                 (status 500))))))
-  
   ;; WebSocket endpoint
   (GET "/ws" [] websocket-handler)
   
@@ -289,14 +232,76 @@
   (route/files "/" {:root "resources/public"})
   
   ;; Default route - serve index.html for SPA
-  (GET "*" [] (slurp "resources/public/index.html"))
+  (GET "*" [] 
+       (fn [_request]
+         {:status 200
+          :headers {"Content-Type" "text/html"}
+          :body (slurp "resources/public/index.html")}))
   
   ;; 404 handler
   (route/not-found {:error "Not found"}))
 
+;; Stress test routes (added separately if available)
+(def stress-test-routes
+  (when stress-test-available?
+    (compojure.core/routes
+      (POST "/api/stress-test/start" request 
+            (try
+              (println "Full request keys:" (keys request))
+              (println "Request body:" (get request :body))
+              (println "Request params:" (get request :params))
+              (println "Request query-params:" (get request :query-params))
+              (println "Request form-params:" (get request :form-params))
+              (let [config (or (get-in request [:body]) 
+                               (get-in request [:params])
+                               (get-in request [:form-params])
+                               {})]
+                (println "Received stress test config:" config)
+                (println "Config type:" (type config))
+                (let [start-fn (ns-resolve stress-test-ns 'start-stress-test!)
+                      result (start-fn config)]
+                  (if result
+                    (response {:status "started" :message "Stress test started successfully"})
+                    (response {:status "error" :message "Stress test is already running"}))))
+              (catch Exception e
+                (println "Error starting stress test:" (.getMessage e))
+                (-> (response {:status "error" :message (.getMessage e)})
+                    (status 500)))))
+      
+      (POST "/api/stress-test/stop" []
+            (try
+              (let [stop-fn (ns-resolve stress-test-ns 'stop-stress-test!)
+                    result (stop-fn)]
+                (if result
+                  (response {:status "stopped" :message "Stress test stopped successfully"})
+                  (response {:status "info" :message "No stress test was running"})))
+              (catch Exception e
+                (-> (response {:status "error" :message (.getMessage e)})
+                    (status 500)))))
+      
+      (GET "/api/stress-test/metrics" []
+           (try
+             (let [metrics-fn (ns-resolve stress-test-ns 'get-current-metrics)
+                   metrics (metrics-fn)]
+               (response (or metrics {:message "No stress test running"})))
+             (catch Exception e
+               (-> (response {:status "error" :message (.getMessage e)})
+                   (status 500)))))
+      
+      (GET "/api/stress-test/report" []
+           (try
+             (let [report-fn (ns-resolve stress-test-ns 'generate-final-report!)
+                   report (report-fn)]
+               (response (or report {:message "No stress test data available"})))
+             (catch Exception e
+               (-> (response {:status "error" :message (.getMessage e)})
+                   (status 500))))))))
+
 ;; Middleware stack
 (def app
-  (-> app-routes
+  (-> (if stress-test-routes
+        (compojure.core/routes app-routes stress-test-routes)
+        app-routes)
       (wrap-cors :access-control-allow-origin [#".*"]
                 :access-control-allow-methods [:get :post :put :delete :options]
                 :access-control-allow-headers ["Content-Type" "Authorization"])
