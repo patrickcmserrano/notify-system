@@ -1,88 +1,36 @@
-;; Notification System Frontend Module Organization
-;; ===============================================
-;;
-;; This module provides a notification system frontend with real-time updates,
-;; theme management, and comprehensive logging capabilities. The architecture
-;; follows clean separation of concerns with the following organization:
-
+;; Frontend entry point and module coordination
 (ns notify-system.frontend.index
-  "Frontend module index and documentation"
+  "Main frontend module - handles app initialization and event coordination"
   (:require [notify-system.frontend.core :as core]
             [notify-system.frontend.events :as events]))
 
-;; ## Namespace Organization
-;;
-;; ### Core Layer (`core.cljs`)
-;; - Application initialization and lifecycle management
-;; - React root management and rendering
-;; - Resource cleanup and shutdown procedures
-;;
-;; ### State Management (`state.cljs`)
-;; - Centralized application state using Reagent atoms
-;; - State update functions with proper encapsulation
-;; - Read-only accessors for state data
-;;
-;; ### Event System (`events.cljs`)
-;; - Event-driven architecture using multimethod dispatch
-;; - Decouples UI components from business logic
-;; - Handles data loading, form submissions, and UI interactions
-;;
-;; ### Communication Layer
-;; - `websocket.cljs`: Real-time WebSocket communication with auto-reconnect
-;; - `api.cljs`: HTTP API client for REST endpoints
-;;
-;; ### Presentation Layer
-;; - `components.cljs`: Reagent UI components with reusable design
-;; - `theme.cljs`: Theme management and persistence
-;;
-;; ### Utilities (`utils.cljs`)
-;; - Common utility functions for formatting, validation, and DOM manipulation
-;; - Safe JSON parsing and localStorage access
-;; - Debounce and throttle utilities
-
-;; ## Public API
+;; Module structure:
+;; core.cljs - app lifecycle, react setup
+;; state.cljs - app state management 
+;; events.cljs - event handling with multimethods
+;; websocket.cljs - real-time updates
+;; api.cljs - http client
+;; components.cljs - ui components
+;; theme.cljs - theme switching
+;; utils.cljs - helper functions
 
 (defn initialize!
-  "Initialize the frontend application"
+  "Start the app"
   []
   (core/initialize!))
 
 (defn shutdown!
-  "Shutdown the application and clean up resources"
+  "Stop the app and cleanup"
   []
   (core/shutdown!))
 
 (defn dispatch-event!
-  "Dispatch an event through the event system"
+  "Send event to event system"
   [event-type & args]
   (apply events/dispatch! event-type args))
 
-;; ## Event Types Available
-;; 
-;; ### Data Events
-;; - `:data/load-categories` - Load notification categories
-;; - `:data/load-logs` - Load notification logs
-;; - `:data/load-statistics` - Load statistics
-;; - `:data/refresh-all` - Refresh logs and statistics
-;;
-;; ### Notification Events  
-;; - `:notification/send` - Send a notification
-;; - `:notification/update-field` - Update form field
-;; - `:notification/reset` - Reset notification form
-;;
-;; ### UI Events
-;; - `:ui/clear-error` - Clear error state
-;; - `:ui/set-loading` - Set loading state
-;;
-;; ### WebSocket Events
-;; - `:websocket/data-update` - Handle real-time data updates
-
-;; ## Module Status
-;; - ✅ Core functionality implemented
-;; - ✅ Event-driven architecture with multimethod dispatch
-;; - ✅ State management with proper encapsulation
-;; - ✅ Real-time WebSocket communication with auto-reconnect
-;; - ✅ HTTP API integration with error handling
-;; - ✅ Theme management with persistence
-;; - ✅ Responsive UI components
-;; - ✅ Comprehensive utility functions
+;; Available events:
+;; :data/load-categories, :data/load-logs, :data/load-statistics, :data/refresh-all
+;; :notification/send, :notification/update-field, :notification/reset  
+;; :ui/clear-error, :ui/set-loading
+;; :websocket/data-update

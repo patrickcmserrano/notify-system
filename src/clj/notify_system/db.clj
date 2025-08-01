@@ -3,7 +3,7 @@
             [hikari-cp.core :as hikari]
             [migratus.core :as migratus]))
 
-;; Configuração do banco de dados PostgreSQL
+;; PostgreSQL database configuration
 (def db-config
   {:adapter         "postgresql"
    :server-name     (or (System/getenv "DB_HOST") "localhost")
@@ -14,7 +14,7 @@
    :maximum-pool-size 10
    :minimum-idle      2})
 
-;; Configuração do pool de conexões Hikari
+;; Hikari connection pool configuration
 (def datasource-options
   {:jdbc-url (str "jdbc:postgresql://"
                   (:server-name db-config) ":"
@@ -25,18 +25,18 @@
    :maximum-pool-size (:maximum-pool-size db-config)
    :minimum-idle (:minimum-idle db-config)})
 
-;; Pool de conexões
+;; Connection pool
 (defonce datasource (atom nil))
 
 (defn init-db! 
-  "Initializa o pool de conexões com o banco de dados"
+  "Initializes the database connection pool"
   []
   (when-not @datasource
     (reset! datasource (hikari/make-datasource datasource-options))
     (println "Database connection pool initialized")))
 
 (defn close-db! 
-  "Fecha o pool de conexões"
+  "Closes the connection pool"
   []
   (when @datasource
     (hikari/close-datasource @datasource)
@@ -44,13 +44,13 @@
     (println "Database connection pool closed")))
 
 (defn get-connection 
-  "Retorna uma conexão do pool"
+  "Returns a connection from the pool"
   []
   (when-not @datasource
     (init-db!))
   @datasource)
 
-;; Configuração do Migratus
+;; Migratus configuration
 (def migration-config
   {:store         :database
    :migration-dir "resources/migrations/"
@@ -62,21 +62,21 @@
                    :password (:password db-config)}})
 
 (defn migrate! 
-  "Executa todas as migrações pendentes"
+  "Executes all pending migrations"
   []
   (migratus/migrate migration-config))
 
 (defn rollback! 
-  "Executa rollback da última migração"
+  "Rolls back the last migration"
   []
   (migratus/rollback migration-config))
 
 (defn create-migration! 
-  "Cria uma nova migração com o nome especificado"
+  "Creates a new migration with the specified name"
   [name]
   (migratus/create migration-config name))
 
-;; Funções utilitárias para queries
+;; Utility functions for queries
 (defn test-connection
   "Test database connection for health checks"
   []
@@ -90,29 +90,29 @@
       false)))
 
 (defn query
-  "Executa uma query SELECT"
+  "Executes a SELECT query"
   [sql & params]
   (jdbc/execute! (get-connection) (into [sql] params)))
 
 (defn execute!
-  "Executa uma query INSERT/UPDATE/DELETE"
+  "Executes an INSERT/UPDATE/DELETE query"
   [sql & params]
   (jdbc/execute! (get-connection) (into [sql] params)))
 
 (defn execute-one!
-  "Executa uma query INSERT/UPDATE/DELETE esperando exatamente um resultado"
+  "Executes an INSERT/UPDATE/DELETE query expecting exactly one result"
   [sql & params]
   (jdbc/execute-one! (get-connection) (into [sql] params)))
 
 (defn transaction
-  "Executa uma função dentro de uma transação"
+  "Executes a function within a transaction"
   [f]
   (jdbc/with-transaction [tx (get-connection)]
     (f tx)))
 
-;; Funções de seeding
+;; Seeding functions
 (defn seed-categories!
-  "Popula a tabela de categorias com os dados iniciais"
+  "Populates the categories table with initial data"
   []
   (let [categories ["Sports" "Finance" "Movies"]]
     (doseq [category categories]
@@ -124,7 +124,7 @@
           (println (str "Error seeding category '" category "': " (.getMessage e))))))))
 
 (defn seed-channels!
-  "Popula a tabela de canais de notificação"
+  "Populates the notification channels table"
   []
   (let [channels [["SMS" "Short Message Service notifications"]
                   ["Email" "Email notifications"]  
@@ -138,7 +138,7 @@
           (println (str "Error seeding channel '" channel "': " (.getMessage e))))))))
 
 (defn seed-users!
-  "Popula usuários de exemplo para testes"
+  "Populates example users for testing"
   []
   (let [users [["john.doe@example.com" "John Doe" "+1234567890" ["Sports" "Finance"] ["SMS" "Email"]]
                ["jane.smith@example.com" "Jane Smith" "+1234567891" ["Movies" "Finance"] ["Email" "Push"]]
@@ -169,7 +169,7 @@
           (println (str "Error seeding user '" name "': " (.getMessage e))))))))
 
 (defn seed-all!
-  "Executa todos os seeders na ordem correta"
+  "Executes all seeders in the correct order"
   []
   (println "Starting database seeding...")
   (seed-categories!)
@@ -179,17 +179,17 @@
 
 ;; Query functions for categories and preferences
 (defn get-all-categories
-  "Retorna todas as categorias ativas"
+  "Returns all active categories"
   []
   (query "SELECT * FROM categories WHERE active = true ORDER BY name"))
 
 (defn get-all-channels
-  "Retorna todos os canais de notificação ativos"
+  "Returns all active notification channels"
   []
   (query "SELECT * FROM notification_channels WHERE active = true ORDER BY name"))
 
 (defn get-user-subscribed-categories
-  "Retorna as categorias que o usuário está inscrito"
+  "Returns the categories that the user is subscribed to"
   [user-id]
   (query "SELECT c.* FROM categories c 
           JOIN user_category_subscriptions ucs ON c.id = ucs.category_id 
@@ -197,7 +197,7 @@
           ORDER BY c.name" user-id))
 
 (defn get-user-preferred-channels
-  "Retorna os canais preferidos do usuário"
+  "Returns the user's preferred channels"
   [user-id]
   (query "SELECT nc.* FROM notification_channels nc 
           JOIN user_channel_preferences ucp ON nc.id = ucp.channel_id 
@@ -205,7 +205,7 @@
           ORDER BY nc.name" user-id))
 
 (defn get-users-for-category-and-channel
-  "Retorna usuários inscritos em uma categoria específica e que preferem um canal específico"
+  "Returns users subscribed to a specific category and who prefer a specific channel"
   [category-name channel-name]
   (query "SELECT DISTINCT u.* FROM users u
           JOIN user_category_subscriptions ucs ON u.id = ucs.user_id
@@ -217,7 +217,7 @@
          category-name channel-name))
 
 (defn init-and-seed!
-  "Inicializa o banco e executa os seeders"
+  "Initializes the database and executes seeders"
   []
   (init-db!)
   (migrate!)
