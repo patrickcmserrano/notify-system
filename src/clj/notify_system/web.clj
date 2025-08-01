@@ -9,7 +9,25 @@
             [notify-system.service :as service]
             [notify-system.logging :as logging]
             [notify-system.db :as db]
-            [clojure.data.json :as json]))
+            [clojure.data.json :as json]
+            [cheshire.generate :as cheshire-gen]))
+
+;; Conditionally require stress test namespace for development
+(def stress-test-available?
+  (try
+    (require 'notify-system.stress-test)
+    true
+    (catch Exception _
+      false)))
+
+(def stress-test-ns 
+  (when stress-test-available?
+    (find-ns 'notify-system.stress-test)))
+
+;; Configure Cheshire to handle java.time.Instant objects
+(cheshire-gen/add-encoder java.time.Instant
+                          (fn [instant jsonGenerator]
+                            (.writeString jsonGenerator (.toString instant))))
 
 ;; Global state for WebSocket connections
 (defonce websocket-connections (atom #{}))
@@ -27,6 +45,66 @@
           (println "Removed closed WebSocket connection:" (.getMessage e)))))))
 
 ;; Controllers
+
+(defn health-controller
+  "Health check endpoint for production monitoring"
+  [_request]
+  (try
+    (let [db-status (if (db/test-connection) "connected" "disconnected")
+          ; More defensive approach to getting start time
+          start-time-value (try
+                             (when-let [start-time-var (resolve 'notify-system.main/start-time)]
+                               (when-let [start-time-atom (var-get start-time-var)]
+                                 @start-time-atom))
+                             (catch Exception _ nil))
+          uptime-ms (- (System/currentTimeMillis) 
+                       (or start-time-value (System/currentTimeMillis)))
+          uptime-hours (int (/ uptime-ms 3600000))
+          uptime-minutes (int (/ (mod uptime-ms 3600000) 60000))
+          uptime-seconds (int (/ (mod uptime-ms 60000) 1000))]
+      (response {:status "healthy"
+                 :timestamp (java.time.Instant/now)
+                 :database db-status
+                 :uptime (format "%dh %dm %ds" uptime-hours uptime-minutes uptime-seconds)
+                 :version "1.0.0"}))
+    (catch Exception e
+      (-> (response {:status "unhealthy"
+                     :error (.getMessage e)
+                     :timestamp (java.time.Instant/now)})
+          (status 503)))))
+
+(defn metrics-controller
+  "Prometheus metrics endpoint"
+  [_request]
+  (try
+    (let [stats (logging/get-notification-statistics (logging/create-logging-service))
+          metrics-text (str 
+                        "# HELP notification_total Total number of notifications sent\n"
+                        "# TYPE notification_total counter\n"
+                        "notification_total " (:total-notifications stats) "\n\n"
+                        
+                        "# HELP notification_successful_total Total number of successful notifications\n"
+                        "# TYPE notification_successful_total counter\n"
+                        "notification_successful_total " (:successful-notifications stats) "\n\n"
+                        
+                        "# HELP notification_failed_total Total number of failed notifications\n"
+                        "# TYPE notification_failed_total counter\n"
+                        "notification_failed_total " (:failed-notifications stats) "\n\n"
+                        
+                        "# HELP application_uptime_seconds Application uptime in seconds\n"
+                        "# TYPE application_uptime_seconds gauge\n"
+                        "application_uptime_seconds " (int (/ (- (System/currentTimeMillis) 
+                                                                 (try
+                                                                   (when-let [start-time-var (resolve 'notify-system.main/start-time)]
+                                                                     (when-let [start-time-atom (var-get start-time-var)]
+                                                                       @start-time-atom))
+                                                                   (catch Exception _ (System/currentTimeMillis)))) 1000)) "\n")]
+      {:status 200
+       :headers {"Content-Type" "text/plain; version=0.0.4; charset=utf-8"}
+       :body metrics-text})
+    (catch Exception e
+      (-> (response {:error (.getMessage e)})
+          (status 500)))))
 (defn send-notification-controller
   "Controller for sending notifications"
   [request]
@@ -136,11 +214,72 @@
 
 ;; Routes
 (defroutes app-routes
+  ;; Health and monitoring endpoints
+  (GET "/health" [] health-controller)
+  (GET "/metrics" [] metrics-controller)
+  
   ;; API Routes
   (POST "/api/notifications" [] send-notification-controller)
   (GET "/api/logs" [] get-logs-controller)
   (GET "/api/logs/statistics" [] get-log-statistics-controller)
   (GET "/api/categories" [] get-categories-controller)
+  
+  ;; Stress Test API Routes (conditional)
+  (when stress-test-available?
+    (POST "/api/stress-test/start" request 
+          (try
+            (println "Full request keys:" (keys request))
+            (println "Request body:" (get request :body))
+            (println "Request params:" (get request :params))
+            (println "Request query-params:" (get request :query-params))
+            (println "Request form-params:" (get request :form-params))
+            (let [config (or (get-in request [:body]) 
+                             (get-in request [:params])
+                             (get-in request [:form-params])
+                             {})]
+              (println "Received stress test config:" config)
+              (println "Config type:" (type config))
+              (let [start-fn (ns-resolve stress-test-ns 'start-stress-test!)
+                    result (start-fn config)]
+                (if result
+                  (response {:status "started" :message "Stress test started successfully"})
+                  (response {:status "error" :message "Stress test is already running"}))))
+            (catch Exception e
+              (println "Error starting stress test:" (.getMessage e))
+              (-> (response {:status "error" :message (.getMessage e)})
+                  (status 500))))))
+  
+  (when stress-test-available?
+    (POST "/api/stress-test/stop" []
+          (try
+            (let [stop-fn (ns-resolve stress-test-ns 'stop-stress-test!)
+                  result (stop-fn)]
+              (if result
+                (response {:status "stopped" :message "Stress test stopped successfully"})
+                (response {:status "info" :message "No stress test was running"})))
+            (catch Exception e
+              (-> (response {:status "error" :message (.getMessage e)})
+                  (status 500))))))
+  
+  (when stress-test-available?
+    (GET "/api/stress-test/metrics" []
+         (try
+           (let [metrics-fn (ns-resolve stress-test-ns 'get-current-metrics)
+                 metrics (metrics-fn)]
+             (response (or metrics {:message "No stress test running"})))
+           (catch Exception e
+             (-> (response {:status "error" :message (.getMessage e)})
+                 (status 500))))))
+  
+  (when stress-test-available?
+    (GET "/api/stress-test/report" []
+         (try
+           (let [report-fn (ns-resolve stress-test-ns 'generate-final-report!)
+                 report (report-fn)]
+             (response (or report {:message "No stress test data available"})))
+           (catch Exception e
+             (-> (response {:status "error" :message (.getMessage e)})
+                 (status 500))))))
   
   ;; WebSocket endpoint
   (GET "/ws" [] websocket-handler)
@@ -174,6 +313,11 @@
    (when @server
      (println "Stopping existing server...")
      (@server))
+   
+   ;; Initialize the broadcast callback for stress test if available
+   (when stress-test-available?
+     (let [set-broadcast-fn! (ns-resolve stress-test-ns 'set-broadcast-fn!)]
+       (set-broadcast-fn! broadcast-to-websockets)))
    
    (println (str "Starting server on port " port "..."))
    (reset! server (http-kit/run-server app {:port port}))

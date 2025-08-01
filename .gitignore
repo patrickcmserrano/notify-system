@@ -34,10 +34,11 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 
-# Knowledge and documentation files (excluding from version control)
+# Knowledge and documentation files (excluding from version control, except delivery docs)
 knowledge/
 docs/
 *.md
+!DELIVERY.md
 README.md
 
 # Temporary files
@@ -45,3 +46,11 @@ README.md
 *.temp
 .nrepl-port
 .rebel_readline_history
+
+# Stress testing (exclude from delivery)
+src/clj/notify_system/stress_test/
+src/clj/notify_system/stress_test.clj
+scripts/*stress*
+stress-test-results/
+stress-test-backup*/
+make
