@@ -4,8 +4,14 @@
             [notify-system.db :as db])
   (:gen-class))
 
+;; Track application start time for health checks
+(defonce start-time (atom nil))
+
 (defn -main [& args]
   (println "=== Starting Notification System ===")
+  
+  ;; Record start time
+  (reset! start-time (System/currentTimeMillis))
   
   ;; Initialize database
   (println "Initializing database...")
@@ -20,4 +26,6 @@
     (println (str "Frontend: http://localhost:" port))
     (println (str "API: http://localhost:" port "/api"))
     (println (str "WebSocket: ws://localhost:" port "/ws"))
+    (println (str "Health Check: http://localhost:" port "/health"))
+    (println (str "Metrics: http://localhost:" port "/metrics"))
     (println "Press Ctrl+C to stop")))

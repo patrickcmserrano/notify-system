@@ -11,6 +11,7 @@
            migratus/migratus                    {:mvn/version "1.4.9"}
            org.clojure/core.async               {:mvn/version "1.6.673"}
            cheshire/cheshire                    {:mvn/version "5.12.0"}
+           com.fasterxml.jackson.datatype/jackson-datatype-jsr310 {:mvn/version "2.15.2"}
            thheller/shadow-cljs                 {:mvn/version "2.28.1"}
            io.github.cognitect-labs/test-runner {:git/tag "v0.5.1"
                                                  :git/sha "dfb30dd"}}
@@ -21,14 +22,19 @@
                                       cljs-ajax/cljs-ajax       {:mvn/version "0.8.4"}
                                       ring-cors/ring-cors       {:mvn/version "0.1.13"}}
                         :jvm-opts    ["-Xmx2g" "-Djava.version=17"]
-                        :main-opts   ["-m" "shadow.cljs.devtools.cli"]}
-           :run        {:main-opts ["-m" "notify-system.main"]}
-           :web        {:main-opts ["-m" "notify-system.main"]}
-           :build      {:extra-deps  {org.clojure/clojurescript {:mvn/version "1.11.60"}
+                        :main-opts   ["-m" "notify-system.main"]}
+           :frontend   {:extra-paths ["dev"]
+                        :extra-deps  {org.clojure/clojurescript {:mvn/version "1.11.60"}
                                       reagent/reagent           {:mvn/version "1.2.0"}
                                       re-frame/re-frame         {:mvn/version "1.3.0"}
                                       cljs-ajax/cljs-ajax       {:mvn/version "0.8.4"}}
-                        :main-opts   ["-m" "shadow.cljs.devtools.cli" "compile" "app"]}
+                        :main-opts   ["-m" "shadow.cljs.devtools.cli" "watch" "app"]}
+           :web        {:main-opts ["-m" "notify-system.main"]}
+           :build      {:extra-deps {org.clojure/clojurescript {:mvn/version "1.11.60"}
+                                     reagent/reagent           {:mvn/version "1.2.0"}
+                                     re-frame/re-frame         {:mvn/version "1.3.0"}
+                                     cljs-ajax/cljs-ajax       {:mvn/version "0.8.4"}}
+                        :main-opts  ["-m" "shadow.cljs.devtools.cli" "compile" "app"]}
            :test       {:extra-paths ["test/clj" "src/clj"]
                         :extra-deps  {org.clojure/test.check               {:mvn/version "1.1.1"}
                                       org.testcontainers/testcontainers    {:mvn/version "1.19.0"}
@@ -41,7 +47,8 @@
                                       org.testcontainers/testcontainers    {:mvn/version "1.19.0"}
                                       org.testcontainers/postgresql        {:mvn/version "1.19.0"}
                                       com.github.seancorfield/expectations {:mvn/version "2.0.165"}
-                                      io.github.cognitect-labs/test-runner {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
+                                      io.github.cognitect-labs/test-runner {:git/tag "v0.5.1"
+                                                                            :git/sha "dfb30dd"}}
                         :main-opts   ["-m" "cognitect.test-runner.auto"]}
            :repl       {:extra-paths ["test/clj" "src/clj" "dev"]
                         :extra-deps  {org.clojure/test.check               {:mvn/version "1.1.1"}

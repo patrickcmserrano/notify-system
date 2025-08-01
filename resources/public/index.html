@@ -8,16 +8,11 @@
 </head>
 <body>
     <div id="app">
-        <div class="loading">Loading...</div>
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            <p>Loading Notification System...</p>
+        </div>
     </div>
     <script src="/js/main.js"></script>
-    <script>
-        // Initialize the application
-        if (typeof notify_system !== 'undefined' && notify_system.frontend) {
-            notify_system.frontend.main();
-        } else {
-            console.error('ClojureScript app not loaded properly');
-        }
-    </script>
 </body>
 </html>

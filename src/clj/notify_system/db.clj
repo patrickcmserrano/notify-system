@@ -77,6 +77,18 @@
   (migratus/create migration-config name))
 
 ;; Funções utilitárias para queries
+(defn test-connection
+  "Test database connection for health checks"
+  []
+  (try
+    (when-not @datasource
+      (init-db!))
+    (jdbc/execute! @datasource ["SELECT 1"])
+    true
+    (catch Exception e
+      (println "Database connection test failed:" (.getMessage e))
+      false)))
+
 (defn query
   "Executa uma query SELECT"
   [sql & params]
