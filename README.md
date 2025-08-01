@@ -6,6 +6,8 @@ A full-stack notification delivery system built with Clojure/ClojureScript that 
 
 This system allows sending notifications to users based on their category subscriptions and preferred delivery channels. It implements a robust architecture with proper separation of concerns, comprehensive testing, and scalable design patterns.
 
+![Notification System Interface](resources/public/assets/Screenshot_2025-08-01_20-16-57.png)
+
 ### Key Features
 
 - **Multi-Channel Delivery**: SMS, Email, and Push Notifications
