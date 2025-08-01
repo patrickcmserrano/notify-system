@@ -25,10 +25,10 @@ docker exec -it notify-postgres psql -U notify_user -d notifications -c "CREATE 
 # Run migrations
 echo "Running database migrations..."
 echo "  - Creating initial tables..."
-docker exec -i notify-postgres psql -U notify_user -d notifications < resources/migrations/001-create-initial-tables.up.sql > /dev/null 2>&1
+docker exec -i notify-postgres psql -U notify_user -d notifications < resources/migrations/001-create-initial-tables-simple.up.sql > /dev/null 2>&1
 
 echo "  - Adding categories and preferences..."
-docker exec -i notify-postgres psql -U notify_user -d notifications < resources/migrations/20250731160407-add-categories-and-preferences.up.sql > /dev/null 2>&1
+docker exec -i notify-postgres psql -U notify_user -d notifications < resources/migrations/002-add-categories-simple.up.sql > /dev/null 2>&1
 
 # Seed data
 echo "Seeding initial data..."

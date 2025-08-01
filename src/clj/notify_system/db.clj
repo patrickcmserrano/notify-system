@@ -85,6 +85,11 @@
 (defn execute!
   "Executa uma query INSERT/UPDATE/DELETE"
   [sql & params]
+  (jdbc/execute! (get-connection) (into [sql] params)))
+
+(defn execute-one!
+  "Executa uma query INSERT/UPDATE/DELETE esperando exatamente um resultado"
+  [sql & params]
   (jdbc/execute-one! (get-connection) (into [sql] params)))
 
 (defn transaction
@@ -129,8 +134,8 @@
     (doseq [[email name phone subscribed-categories preferred-channels] users]
       (try
         ;; Insert user
-        (let [user-result (execute! "INSERT INTO users (email, name, phone) VALUES (?, ?, ?) ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, phone = EXCLUDED.phone RETURNING id"
-                                    email name phone)
+        (let [user-result (execute-one! "INSERT INTO users (email, name, phone) VALUES (?, ?, ?) ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, phone = EXCLUDED.phone RETURNING id"
+                                        email name phone)
               user-id (:users/id user-result)]
           
           ;; Insert user category subscriptions
